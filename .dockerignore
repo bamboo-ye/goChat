@@ -1,0 +1,10 @@
+.DS_Store
+.env
+.git
+.idea
+Dockerfile*
+README.md
+asset/upload/*
+gochat
+*.log
+*.tar

@@ -1,0 +1,82 @@
+{{define "/chat/ai.shtml"}}
+<div id="tabbar-ai" class="mui-control-content ai-home" v-show="win=='main'">
+    <header class="mui-bar mui-bar-nav">
+        <h1 class="mui-title">AI 陪伴</h1>
+        <button class="mui-btn mui-btn-link mui-pull-right" @tap="showAICharacterForm">新角色</button>
+    </header>
+
+    <div class="ai-section-title">我的会话</div>
+    <ul class="mui-table-view ai-list" v-if="aiConversations.length">
+        <li class="mui-table-view-cell mui-media" v-for="item in aiConversations" :key="'conversation-'+item.ID"
+            @tap="openAIConversation(item)">
+            <img class="mui-media-object mui-pull-left avatar" :src="aiConversationAvatar(item)">
+            <div class="mui-media-body">
+                <span v-text="item.title"></span>
+                <p class="mui-ellipsis" v-text="aiConversationSubtitle(item)"></p>
+            </div>
+        </li>
+    </ul>
+    <div class="ai-empty" v-else>选择一个角色，开始新的聊天</div>
+
+    <div class="ai-section-title">我的角色</div>
+    <ul class="mui-table-view ai-list" v-if="aiCharacters.length">
+        <li class="mui-table-view-cell mui-media" v-for="item in aiCharacters" :key="'character-'+item.ID"
+            @tap="startAIConversation(item)">
+            <img class="mui-media-object mui-pull-left avatar" :src="item.avatar || '/asset/images/avatar0.png'">
+            <div class="mui-media-body">
+                <span v-text="item.name"></span>
+                <p class="mui-ellipsis" v-text="item.traits || item.relationType"></p>
+            </div>
+        </li>
+    </ul>
+    <div class="ai-empty" v-else>还没有角色，点击右上角创建</div>
+</div>
+
+<div class="ai-character-form" v-show="win=='ai-character-form'">
+    <header class="mui-bar mui-bar-nav">
+        <a class="mui-icon mui-icon-left-nav mui-pull-left" @tap="goBack"></a>
+        <h1 class="mui-title">创建 AI 角色</h1>
+    </header>
+    <div class="mui-content">
+        <div class="ai-template-grid">
+            <button v-for="item in aiTemplates" @tap="chooseAITemplate(item)"
+                :class="{'selected': aiCharacterForm.templateId===item.ID}" v-text="item.name"></button>
+        </div>
+        <div class="mui-input-group">
+            <div class="mui-input-row"><label>名字</label><input v-model="aiCharacterForm.name" placeholder="角色名字"></div>
+            <div class="mui-input-row"><label>关系</label><input v-model="aiCharacterForm.relationType" placeholder="女友、男友、闺蜜等"></div>
+            <div class="mui-input-row area"><label>特点</label><textarea v-model="aiCharacterForm.traits" placeholder="温柔、幽默、理性..."></textarea></div>
+            <div class="mui-input-row area"><label>爱好</label><textarea v-model="aiCharacterForm.hobbies" placeholder="音乐、电影、旅行..."></textarea></div>
+            <div class="mui-input-row area"><label>风格</label><textarea v-model="aiCharacterForm.speakingStyle" placeholder="简短、活泼、善于倾听..."></textarea></div>
+            <div class="mui-input-row area"><label>背景</label><textarea v-model="aiCharacterForm.background" placeholder="角色背景设定"></textarea></div>
+        </div>
+        <div class="mui-content-padded">
+            <button class="mui-btn mui-btn-block mui-btn-primary" :disabled="aiSaving" @tap="createAICharacter"
+                v-text="aiSaving ? '创建中...' : '创建并开始聊天'"></button>
+        </div>
+    </div>
+</div>
+
+<div class="ai-chat" v-show="win=='ai-chat'">
+    <header class="mui-bar mui-bar-nav">
+        <a class="mui-icon mui-icon-left-nav mui-pull-left" @tap="leaveAIChat"></a>
+        <h1 class="mui-title" v-text="aiCurrentConversation.title || 'AI 聊天'"></h1>
+    </header>
+    <div class="ai-message-list" ref="aiMessageList">
+        <div class="ai-message" :class="item.role==='user' ? 'mine' : 'other'" v-for="item in aiMessages">
+            <img class="avatar" :src="item.role==='user' ? (info.icon || '/asset/images/avatar0.png') : aiCurrentAvatar">
+            <div>
+                <div class="content" v-text="item.content || (item.status==='pending' ? '正在思考...' : '回复失败')"></div>
+                <button v-if="item.status==='failed'" class="mui-btn mui-btn-link ai-retry"
+                    :disabled="aiSending" @tap="retryAIMessage(item)">重新生成</button>
+            </div>
+        </div>
+    </div>
+    <div class="ai-composer">
+        <input type="text" v-model="aiText" :disabled="aiSending" placeholder="输入消息"
+            @keyup.enter="sendAIText">
+        <button class="mui-btn mui-btn-primary" :disabled="aiSending || !aiText.trim()" @tap="sendAIText"
+            v-text="aiSending ? '生成中' : '发送'"></button>
+    </div>
+</div>
+{{end}}
