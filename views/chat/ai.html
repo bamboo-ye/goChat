@@ -1,7 +1,7 @@
 {{define "/chat/ai.shtml"}}
 <div id="tabbar-ai" class="mui-control-content ai-home" v-show="win=='main'">
     <header class="mui-bar mui-bar-nav">
-        <h1 class="mui-title">AI 陪伴</h1>
+        <h1 class="mui-title brand-title"><img src="/asset/images/gochat-logo.svg" alt="">AI 陪伴</h1>
         <button class="mui-btn mui-btn-link mui-pull-right" @tap="showAICharacterForm">新角色</button>
     </header>
 
@@ -66,9 +66,10 @@
         <div class="ai-message" :class="item.role==='user' ? 'mine' : 'other'" v-for="item in aiMessages">
             <img class="avatar" :src="item.role==='user' ? (info.icon || '/asset/images/avatar0.png') : aiCurrentAvatar">
             <div>
-                <div class="content" v-text="item.content || (item.status==='pending' ? '正在思考...' : '回复失败')"></div>
+                <div class="content" v-text="item.content || (item.status==='pending' ? '对方正在输入' : '回复失败')"></div>
                 <button v-if="item.status==='failed'" class="mui-btn mui-btn-link ai-retry"
-                    :disabled="aiSending" @tap="retryAIMessage(item)">重新生成</button>
+                    :disabled="aiRefreshing" @tap="reloadAIMessages"
+                    v-text="aiRefreshing ? '拉取中...' : '重新拉取消息'"></button>
             </div>
         </div>
     </div>
@@ -76,7 +77,7 @@
         <input type="text" v-model="aiText" :disabled="aiSending" placeholder="输入消息"
             @keyup.enter="sendAIText">
         <button class="mui-btn mui-btn-primary" :disabled="aiSending || !aiText.trim()" @tap="sendAIText"
-            v-text="aiSending ? '生成中' : '发送'"></button>
+            v-text="aiSending ? '发送中' : '发送'"></button>
     </div>
 </div>
 {{end}}

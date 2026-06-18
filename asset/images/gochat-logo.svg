@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" role="img" aria-labelledby="title desc">
+  <title id="title">goChat cartoon logo</title>
+  <desc id="desc">A smiling pink chat bubble with a heart and mint sparkle.</desc>
+  <rect width="256" height="256" rx="58" fill="#fff3f7"/>
+  <path d="M52 70c0-22 18-40 40-40h76c22 0 40 18 40 40v66c0 22-18 40-40 40h-33l-33 28c-8 7-20 1-18-10l4-19c-20-2-36-19-36-39V70Z" fill="#ff6f9d"/>
+  <path d="M71 73c5-14 18-23 34-23h58c12 0 23 5 30 13" fill="none" stroke="#ffb7ce" stroke-linecap="round" stroke-width="12"/>
+  <circle cx="105" cy="111" r="8" fill="#54283b"/>
+  <circle cx="163" cy="111" r="8" fill="#54283b"/>
+  <path d="M112 137c12 12 31 12 43 0" fill="none" stroke="#54283b" stroke-linecap="round" stroke-width="8"/>
+  <path d="M177 66c-9-12-30-4-26 12 3 11 16 19 26 26 10-7 23-15 26-26 4-16-17-24-26-12Z" fill="#fff"/>
+  <path d="m57 52 4 10 10 4-10 4-4 10-4-10-10-4 10-4 4-10Z" fill="#5fd2b5"/>
+  <circle cx="88" cy="139" r="8" fill="#ff9cba" opacity=".72"/>
+  <circle cx="180" cy="139" r="8" fill="#ff9cba" opacity=".72"/>
+</svg>

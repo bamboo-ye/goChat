@@ -161,6 +161,7 @@
                 aiCurrentAvatar: "/asset/images/avatar0.png",
                 aiText: "",
                 aiSending: false,
+                aiRefreshing: false,
                 aiSaving: false,
                 aiStartingCharacterId: 0,
                 aiCharacterForm: {
@@ -303,6 +304,15 @@
                             mui.toast(error.message);
                         });
                 },
+                reloadAIMessages: function () {
+                    if (this.aiRefreshing || !this.aiCurrentConversation.ID) {
+                        return;
+                    }
+                    this.aiRefreshing = true;
+                    return this.loadAIMessages().finally(function () {
+                        this.aiRefreshing = false;
+                    }.bind(this));
+                },
                 aiConversationSnapshot: function (conversation) {
                     try {
                         return JSON.parse(conversation.characterSnapshot || "{}");
@@ -338,25 +348,7 @@
                         pending.status = "failed";
                         mui.toast(error.message);
                         this.loadAIMessages();
-                    }).finally(function () {
-                        this.aiSending = false;
-                    }.bind(this));
-                },
-                retryAIMessage: function (message) {
-                    if (this.aiSending || !message.ID) {
-                        return;
-                    }
-                    this.aiSending = true;
-                    message.status = "pending";
-                    aiRequest("/api/ai/conversations/" + this.aiCurrentConversation.ID + "/messages/" + message.ID + "/retry", {
-                        method: "POST"
-                    }).then(function (result) {
-                        Object.assign(message, result);
-                        this.scrollAIChat();
-                    }.bind(this)).catch(function (error) {
-                        message.status = "failed";
-                        mui.toast(error.message);
-                    }).finally(function () {
+                    }.bind(this)).finally(function () {
                         this.aiSending = false;
                     }.bind(this));
                 },

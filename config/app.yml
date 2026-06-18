@@ -13,10 +13,12 @@ udp:
   host: "127.0.0.1"
   port: 3001
 ai:
-  provider: "openai-compatible"
-  baseURL: ""
+  provider: "openrouter"
+  baseURL: "https://openrouter.ai/api/v1"
   apiKey: ""
-  model: ""
+  model: "openai/gpt-oss-120b:free"
+  httpReferer: ""
+  appTitle: "goChat"
   timeoutSeconds: 60
   historyLimit: 20
   maxInputCharacters: 4000

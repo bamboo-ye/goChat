@@ -10,9 +10,11 @@ export GOCHAT_MYSQL_DSN='gochat:password@tcp(127.0.0.1:3306)/goChat?charset=utf8
 export GOCHAT_REDIS_ADDR='127.0.0.1:6379'
 export GOCHAT_REDIS_PASSWORD=''
 export GOCHAT_SERVER_PORT=':8081'
-export GOCHAT_AI_BASEURL='https://api.openai.com/v1'
-export GOCHAT_AI_APIKEY='your-api-key'
-export GOCHAT_AI_MODEL='your-model'
+export GOCHAT_AI_PROVIDER='openrouter'
+export GOCHAT_AI_BASEURL='https://openrouter.ai/api/v1'
+export GOCHAT_AI_APIKEY='your-openrouter-api-key'
+export GOCHAT_AI_MODEL='openai/gpt-oss-120b:free'
+export GOCHAT_AI_APPTITLE='goChat'
 go run .
 ```
 
@@ -42,13 +44,19 @@ All chat APIs except registration and login require an `Authorization: Bearer
 
 ## AI service API
 
-The AI service uses an OpenAI-compatible `POST /chat/completions` provider.
+The AI service uses OpenRouter's OpenAI-compatible `POST /chat/completions` API.
 Character templates are seeded during migration.
 
 After login, open the `AI` tab to create a role from a template, start a
 conversation, and send messages. AI messages and usage are persisted in MySQL.
 The MVP limits prompt history, input length, concurrent generation per
 conversation, request timeout, and daily calls per user.
+
+Before each model request, completed turns are sampled by calendar day.
+Today's turns are retained at full density; turns from `N` days ago retain
+approximately `1 / (N + 1)` of that day's conversations. User and assistant
+messages stay paired, while the newest turns take priority within
+`ai.historyLimit`.
 
 - `GET /api/ai/templates`
 - `POST|GET /api/ai/characters`

@@ -3,10 +3,11 @@
 
 <head>
     <meta name="viewport" content="width=device-width, initial-scale=1,maximum-scale=1,user-scalable=no">
-    <title>IM解决方案</title>
+    <title>注册 goChat</title>
     <link rel="stylesheet" href="/asset/plugins/mui/css/mui.css" />
-    <link rel="stylesheet" href="/asset/css/login.css" />
-    <link rel="icon" href="asset/images/favicon.ico" type="image/x-icon" />
+    <link rel="stylesheet" href="/asset/css/login.css?v=20260618-2" />
+    <link rel="stylesheet" href="/asset/css/brand.css?v=20260618-2" />
+    <link rel="icon" href="/asset/images/gochat-logo.svg" type="image/svg+xml" />
     <script src="/asset/plugins/mui/js/mui.js"></script>
     <script src="/asset/js/vue.min.js"></script>
     <script src="/asset/js/util.js"></script>
@@ -14,10 +15,12 @@
 
 <body>
 
-    <header class="mui-bar mui-bar-nav">
-        <h1 class="mui-title">注册</h1>
-    </header>
-    <div class="mui-content register-page" id="pageapp">
+    <div class="mui-content register-page auth-page" id="pageapp">
+        <div class="auth-brand">
+            <img src="/asset/images/gochat-logo.svg" alt="goChat">
+            <h1>创建账号</h1>
+            <p>开启轻松、温暖的聊天体验</p>
+        </div>
         <form id='login-form' class="mui-input-group register-form">
             <div class="mui-input-row">
                 <input v-model="user.name" placeholder="请输入用户名" type="text" class="mui-input-clear mui-input">

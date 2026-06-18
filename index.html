@@ -7,11 +7,12 @@
 </head>
 <body>
 
-<header class="mui-bar mui-bar-nav">
-    <h1 class="mui-title">登录</h1>
-</header>
-{{.}}
-<div class="mui-content login-page" id="pageapp">
+<div class="mui-content login-page auth-page" id="pageapp">
+    <div class="auth-brand">
+        <img src="/asset/images/gochat-logo.svg" alt="goChat">
+        <h1>欢迎回来</h1>
+        <p>和朋友、群组与 AI 伙伴保持联系</p>
+    </div>
     <form id='login-form' class="mui-input-group login-from">
         <div class="mui-input-row">
             <input v-model="user.name" placeholder="请输入用户名" type="text" class="mui-input-clear mui-input" >

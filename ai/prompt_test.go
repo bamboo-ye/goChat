@@ -18,4 +18,9 @@ func TestBuildPromptFiltersIncompleteMessages(t *testing.T) {
 	if !strings.Contains(prompt[0].Content, "小雨") || prompt[1].Content != "你好" {
 		t.Fatalf("unexpected prompt: %#v", prompt)
 	}
+	for _, instruction := range []string{"日常聊天", "回复应简短", "拆分成多个简短消息"} {
+		if !strings.Contains(prompt[0].Content, instruction) {
+			t.Fatalf("system prompt missing %q: %s", instruction, prompt[0].Content)
+		}
+	}
 }

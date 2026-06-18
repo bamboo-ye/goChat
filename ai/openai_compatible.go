@@ -16,15 +16,30 @@ type OpenAICompatibleProvider struct {
 	baseURL    string
 	apiKey     string
 	model      string
+	referer    string
+	title      string
 	httpClient *http.Client
 }
 
 func NewOpenAICompatibleProvider(name, baseURL, apiKey, model string, timeout time.Duration) *OpenAICompatibleProvider {
+	return NewOpenAICompatibleProviderWithAttribution(name, baseURL, apiKey, model, "", "", timeout)
+}
+
+func NewOpenRouterProvider(baseURL, apiKey, model, referer, title string, timeout time.Duration) *OpenAICompatibleProvider {
+	if strings.TrimSpace(baseURL) == "" {
+		baseURL = "https://openrouter.ai/api/v1"
+	}
+	return NewOpenAICompatibleProviderWithAttribution("openrouter", baseURL, apiKey, model, referer, title, timeout)
+}
+
+func NewOpenAICompatibleProviderWithAttribution(name, baseURL, apiKey, model, referer, title string, timeout time.Duration) *OpenAICompatibleProvider {
 	return &OpenAICompatibleProvider{
-		name:    name,
-		baseURL: strings.TrimRight(baseURL, "/"),
-		apiKey:  apiKey,
-		model:   model,
+		name:    strings.TrimSpace(name),
+		baseURL: strings.TrimRight(strings.TrimSpace(baseURL), "/"),
+		apiKey:  strings.TrimSpace(apiKey),
+		model:   strings.TrimSpace(model),
+		referer: strings.TrimSpace(referer),
+		title:   strings.TrimSpace(title),
 		httpClient: &http.Client{
 			Timeout: timeout,
 		},
@@ -57,7 +72,7 @@ type chatCompletionResponse struct {
 }
 
 func (p *OpenAICompatibleProvider) Complete(ctx context.Context, request CompletionRequest) (CompletionResult, error) {
-	if p.baseURL == "" || p.model == "" {
+	if p.baseURL == "" || p.model == "" || p.apiKey == "" {
 		return CompletionResult{}, fmt.Errorf("ai provider is not configured")
 	}
 
@@ -76,8 +91,12 @@ func (p *OpenAICompatibleProvider) Complete(ctx context.Context, request Complet
 		return CompletionResult{}, fmt.Errorf("create completion request: %w", err)
 	}
 	httpRequest.Header.Set("Content-Type", "application/json")
-	if p.apiKey != "" {
-		httpRequest.Header.Set("Authorization", "Bearer "+p.apiKey)
+	httpRequest.Header.Set("Authorization", "Bearer "+p.apiKey)
+	if p.referer != "" {
+		httpRequest.Header.Set("HTTP-Referer", p.referer)
+	}
+	if p.title != "" {
+		httpRequest.Header.Set("X-Title", p.title)
 	}
 
 	response, err := p.httpClient.Do(httpRequest)

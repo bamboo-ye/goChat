@@ -44,11 +44,12 @@ func NewService(provider Provider, historyLimit, maxInput, maxTokens int, temper
 
 func NewServiceFromConfig() *Service {
 	timeout := time.Duration(viper.GetInt("ai.timeoutSeconds")) * time.Second
-	provider := NewOpenAICompatibleProvider(
-		viper.GetString("ai.provider"),
+	provider := NewOpenRouterProvider(
 		viper.GetString("ai.baseURL"),
 		viper.GetString("ai.apiKey"),
 		viper.GetString("ai.model"),
+		viper.GetString("ai.httpReferer"),
+		viper.GetString("ai.appTitle"),
 		timeout,
 	)
 	return NewService(
@@ -455,13 +456,14 @@ func (s *Service) recentHistory(conversationID uint) ([]models.AIMessage, error)
 	if limit <= 0 {
 		limit = 20
 	}
+	candidateLimit := historyCandidateLimit(limit)
 	var messages []models.AIMessage
 	err := utils.Db.Where("conversation_id = ? and status = ?", conversationID, models.AIMessageCompleted).
-		Order("id desc").Limit(limit).Find(&messages).Error
+		Order("id desc").Limit(candidateLimit).Find(&messages).Error
 	for left, right := 0, len(messages)-1; left < right; left, right = left+1, right-1 {
 		messages[left], messages[right] = messages[right], messages[left]
 	}
-	return messages, err
+	return CompressHistoryByDate(messages, time.Now(), limit), err
 }
 
 func (s *Service) recentHistoryBefore(conversationID, messageID uint) ([]models.AIMessage, error) {
@@ -469,13 +471,19 @@ func (s *Service) recentHistoryBefore(conversationID, messageID uint) ([]models.
 	if limit <= 0 {
 		limit = 20
 	}
+	candidateLimit := historyCandidateLimit(limit)
 	var messages []models.AIMessage
 	err := utils.Db.Where("conversation_id = ? and id < ? and status = ?", conversationID, messageID, models.AIMessageCompleted).
-		Order("id desc").Limit(limit).Find(&messages).Error
+		Order("id desc").Limit(candidateLimit).Find(&messages).Error
 	for left, right := 0, len(messages)-1; left < right; left, right = left+1, right-1 {
 		messages[left], messages[right] = messages[right], messages[left]
 	}
-	return messages, err
+	return CompressHistoryByDate(messages, time.Now(), limit), err
+}
+
+func historyCandidateLimit(messageLimit int) int {
+	const candidateMultiplier = 8
+	return messageLimit * candidateMultiplier
 }
 
 func (s *Service) failMessage(message models.AIMessage, cause error) (models.AIMessage, error) {
