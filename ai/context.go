@@ -12,6 +12,39 @@ type conversationTurn struct {
 	dayAge   int
 }
 
+func BuildHybridHistory(history []models.AIMessage, now time.Time, messageLimit, recentMessageLimit int) []models.AIMessage {
+	if messageLimit <= 0 || len(history) == 0 {
+		return nil
+	}
+	turns := buildConversationTurns(history, now)
+	if len(turns) == 0 {
+		return nil
+	}
+
+	recentBudget := recentMessageLimit
+	if recentBudget <= 0 || recentBudget > messageLimit {
+		recentBudget = messageLimit
+	}
+	recentStart := len(turns)
+	recentUsed := 0
+	for i := len(turns) - 1; i >= 0; i-- {
+		size := len(turns[i].messages)
+		if recentUsed+size > recentBudget {
+			break
+		}
+		recentStart = i
+		recentUsed += size
+	}
+
+	recent := flattenTurns(turns[recentStart:])
+	remaining := messageLimit - len(recent)
+	if remaining <= 0 || recentStart == 0 {
+		return recent
+	}
+	older := CompressHistoryByDate(flattenTurns(turns[:recentStart]), now, remaining)
+	return append(older, recent...)
+}
+
 // CompressHistoryByDate keeps recent conversations dense while progressively
 // sampling older days. Messages are retained as user/assistant turns so the
 // model does not receive a question without its corresponding answer.
@@ -89,6 +122,14 @@ func buildConversationTurns(history []models.AIMessage, now time.Time) []convers
 		}
 	}
 	return turns
+}
+
+func flattenTurns(turns []conversationTurn) []models.AIMessage {
+	var messages []models.AIMessage
+	for _, turn := range turns {
+		messages = append(messages, turn.messages...)
+	}
+	return messages
 }
 
 func calendarDayAge(createdAt, now time.Time) int {

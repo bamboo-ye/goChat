@@ -61,6 +61,33 @@ func TestCompressHistoryByDateKeepsTurnsAndRecentLimit(t *testing.T) {
 	}
 }
 
+func TestBuildHybridHistoryKeepsRecentWindowAndDecaysOlderTurns(t *testing.T) {
+	now := time.Date(2026, 6, 18, 12, 0, 0, 0, time.Local)
+	var history []models.AIMessage
+	for dayAge := 2; dayAge >= 0; dayAge-- {
+		for i := 0; i < 4; i++ {
+			createdAt := now.AddDate(0, 0, -dayAge).Add(time.Duration(i) * time.Minute)
+			history = append(history,
+				testHistoryMessage("user", fmt.Sprintf("d%d-u%d", dayAge, i), createdAt),
+				testHistoryMessage("assistant", fmt.Sprintf("d%d-a%d", dayAge, i), createdAt.Add(time.Second)),
+			)
+		}
+	}
+
+	hybrid := BuildHybridHistory(history, now, 12, 6)
+	if len(hybrid) != 12 {
+		t.Fatalf("expected history limit to be filled, got %d", len(hybrid))
+	}
+	if hybrid[len(hybrid)-6].Content != "d0-u1" || hybrid[len(hybrid)-1].Content != "d0-a3" {
+		t.Fatalf("recent sliding window was not preserved: %#v", hybrid)
+	}
+	for i := 0; i < len(hybrid); i += 2 {
+		if hybrid[i].Role != "user" || hybrid[i+1].Role != "assistant" {
+			t.Fatalf("hybrid context split a turn: %#v", hybrid[i:i+2])
+		}
+	}
+}
+
 func testHistoryMessage(role, content string, createdAt time.Time) models.AIMessage {
 	return models.AIMessage{
 		Model:   gorm.Model{CreatedAt: createdAt},

@@ -23,6 +23,7 @@ func Migrate() error {
 		&AIConversation{},
 		&AIMessage{},
 		&AIUsageLog{},
+		&AIMemory{},
 	); err != nil {
 		return fmt.Errorf("migrate database: %w", err)
 	}
@@ -39,6 +40,7 @@ func normalizeAIData() error {
 	// Merge historical duplicates before AutoMigrate adds the new unique indexes.
 	hasMessages := utils.Db.Migrator().HasTable(&AIMessage{})
 	hasUsageLogs := utils.Db.Migrator().HasTable(&AIUsageLog{})
+	hasMemories := utils.Db.Migrator().HasTable(&AIMemory{})
 
 	return utils.Db.Transaction(func(tx *gorm.DB) error {
 		var characters []AICharacter
@@ -91,6 +93,13 @@ func normalizeAIData() error {
 			}
 			if hasUsageLogs {
 				if err := tx.Unscoped().Model(&AIUsageLog{}).
+					Where("conversation_id = ?", conversation.ID).
+					Update("conversation_id", canonical.id).Error; err != nil {
+					return err
+				}
+			}
+			if hasMemories {
+				if err := tx.Unscoped().Model(&AIMemory{}).
 					Where("conversation_id = ?", conversation.ID).
 					Update("conversation_id", canonical.id).Error; err != nil {
 					return err

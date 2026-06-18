@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log"
 	"strings"
 	"time"
 
@@ -29,9 +30,10 @@ type Service struct {
 	maxTokens    int
 	temperature  float64
 	dailyLimit   int
+	memory       MemoryConfig
 }
 
-func NewService(provider Provider, historyLimit, maxInput, maxTokens int, temperature float64, dailyLimit int) *Service {
+func NewService(provider Provider, historyLimit, maxInput, maxTokens int, temperature float64, dailyLimit int, memory MemoryConfig) *Service {
 	return &Service{
 		provider:     provider,
 		historyLimit: historyLimit,
@@ -39,6 +41,7 @@ func NewService(provider Provider, historyLimit, maxInput, maxTokens int, temper
 		maxTokens:    maxTokens,
 		temperature:  temperature,
 		dailyLimit:   dailyLimit,
+		memory:       normalizeMemoryConfig(memory),
 	}
 }
 
@@ -59,6 +62,15 @@ func NewServiceFromConfig() *Service {
 		viper.GetInt("ai.maxOutputTokens"),
 		viper.GetFloat64("ai.temperature"),
 		viper.GetInt("ai.dailyMessageLimit"),
+		MemoryConfig{
+			Enabled:            viper.GetBool("ai.memory.enabled"),
+			RecentMessageLimit: viper.GetInt("ai.memory.recentMessageLimit"),
+			TopK:               viper.GetInt("ai.memory.topK"),
+			CandidateLimit:     viper.GetInt("ai.memory.candidateLimit"),
+			MinScore:           viper.GetFloat64("ai.memory.minScore"),
+			VectorDimensions:   viper.GetInt("ai.memory.vectorDimensions"),
+			BackfillLimit:      viper.GetInt("ai.memory.backfillLimit"),
+		},
 	)
 }
 
@@ -305,10 +317,11 @@ func (s *Service) SendMessage(ctx context.Context, ownerID, conversationID uint,
 	if err != nil {
 		return s.failMessage(assistantMessage, err)
 	}
+	memories := s.retrieveLongTermMemories(ownerID, conversationID, content, history, 0)
 
 	startedAt := time.Now()
 	result, callErr := s.provider.Complete(ctx, CompletionRequest{
-		Messages: BuildPrompt(snapshot, history), Temperature: s.temperature, MaxTokens: s.maxTokens,
+		Messages: BuildPromptWithMemories(snapshot, memories, history), Temperature: s.temperature, MaxTokens: s.maxTokens,
 	})
 	usage := models.AIUsageLog{
 		OwnerID: ownerID, ConversationID: conversationID, MessageID: assistantMessage.ID,
@@ -339,6 +352,9 @@ func (s *Service) SendMessage(ctx context.Context, ownerID, conversationID uint,
 			Update("last_message_at", time.Now()).Error
 	}); err != nil {
 		return models.AIMessage{}, err
+	}
+	if err := s.storeTurnMemory(ownerID, conversationID, userMessage, assistantMessage); err != nil {
+		log.Printf("store ai memory: %v", err)
 	}
 	return assistantMessage, nil
 }
@@ -375,13 +391,18 @@ func (s *Service) RetryMessage(ctx context.Context, ownerID, conversationID, mes
 	if err != nil {
 		return s.failMessage(assistantMessage, err)
 	}
-	return s.completeAssistantMessage(ctx, ownerID, conversationID, assistantMessage, snapshot, history)
+	userMessage, err := s.userMessageBefore(ownerID, conversationID, messageID)
+	if err != nil {
+		return s.failMessage(assistantMessage, err)
+	}
+	memories := s.retrieveLongTermMemories(ownerID, conversationID, userMessage.Content, history, messageID)
+	return s.completeAssistantMessage(ctx, ownerID, conversationID, assistantMessage, userMessage, snapshot, memories, history)
 }
 
-func (s *Service) completeAssistantMessage(ctx context.Context, ownerID, conversationID uint, assistantMessage models.AIMessage, snapshot CharacterSnapshot, history []models.AIMessage) (models.AIMessage, error) {
+func (s *Service) completeAssistantMessage(ctx context.Context, ownerID, conversationID uint, assistantMessage, userMessage models.AIMessage, snapshot CharacterSnapshot, memories []RetrievedMemory, history []models.AIMessage) (models.AIMessage, error) {
 	startedAt := time.Now()
 	result, callErr := s.provider.Complete(ctx, CompletionRequest{
-		Messages: BuildPrompt(snapshot, history), Temperature: s.temperature, MaxTokens: s.maxTokens,
+		Messages: BuildPromptWithMemories(snapshot, memories, history), Temperature: s.temperature, MaxTokens: s.maxTokens,
 	})
 	usage := models.AIUsageLog{
 		OwnerID: ownerID, ConversationID: conversationID, MessageID: assistantMessage.ID,
@@ -413,6 +434,9 @@ func (s *Service) completeAssistantMessage(ctx context.Context, ownerID, convers
 			Update("last_message_at", time.Now()).Error
 	}); err != nil {
 		return models.AIMessage{}, err
+	}
+	if err := s.storeTurnMemory(ownerID, conversationID, userMessage, assistantMessage); err != nil {
+		log.Printf("store ai memory: %v", err)
 	}
 	return assistantMessage, nil
 }
@@ -463,7 +487,7 @@ func (s *Service) recentHistory(conversationID uint) ([]models.AIMessage, error)
 	for left, right := 0, len(messages)-1; left < right; left, right = left+1, right-1 {
 		messages[left], messages[right] = messages[right], messages[left]
 	}
-	return CompressHistoryByDate(messages, time.Now(), limit), err
+	return BuildHybridHistory(messages, time.Now(), limit, s.memory.RecentMessageLimit), err
 }
 
 func (s *Service) recentHistoryBefore(conversationID, messageID uint) ([]models.AIMessage, error) {
@@ -478,7 +502,7 @@ func (s *Service) recentHistoryBefore(conversationID, messageID uint) ([]models.
 	for left, right := 0, len(messages)-1; left < right; left, right = left+1, right-1 {
 		messages[left], messages[right] = messages[right], messages[left]
 	}
-	return CompressHistoryByDate(messages, time.Now(), limit), err
+	return BuildHybridHistory(messages, time.Now(), limit, s.memory.RecentMessageLimit), err
 }
 
 func historyCandidateLimit(messageLimit int) int {

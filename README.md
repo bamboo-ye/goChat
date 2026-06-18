@@ -58,6 +58,28 @@ approximately `1 / (N + 1)` of that day's conversations. User and assistant
 messages stay paired, while the newest turns take priority within
 `ai.historyLimit`.
 
+The context pipeline combines three layers:
+
+1. A recent-message sliding window keeps the newest completed turns unchanged.
+2. Older turns fill the remaining history budget through calendar-day decay.
+3. Long-term RAG memories are stored in MySQL and retrieved by cosine
+   similarity before prompt construction.
+
+The RAG layer uses local hashed vectors built from Chinese character n-grams
+and Latin word tokens, so it does not require a separate vector database or an
+embedding API. Retrieved memories are inserted as protected system context,
+deduplicated against the short-term history, and ignored if memory indexing or
+retrieval fails.
+
+Memory behavior can be tuned with:
+
+- `GOCHAT_AI_MEMORY_RECENTMESSAGELIMIT`
+- `GOCHAT_AI_MEMORY_TOPK`
+- `GOCHAT_AI_MEMORY_CANDIDATELIMIT`
+- `GOCHAT_AI_MEMORY_MINSCORE`
+- `GOCHAT_AI_MEMORY_VECTORDIMENSIONS`
+- `GOCHAT_AI_MEMORY_BACKFILLLIMIT`
+
 - `GET /api/ai/templates`
 - `POST|GET /api/ai/characters`
 - `PUT|DELETE /api/ai/characters/:id`

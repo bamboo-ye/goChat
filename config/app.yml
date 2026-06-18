@@ -21,6 +21,14 @@ ai:
   appTitle: "goChat"
   timeoutSeconds: 60
   historyLimit: 20
+  memory:
+    enabled: true
+    recentMessageLimit: 8
+    topK: 4
+    candidateLimit: 200
+    minScore: 0.08
+    vectorDimensions: 256
+    backfillLimit: 400
   maxInputCharacters: 4000
   maxOutputTokens: 800
   temperature: 0.8

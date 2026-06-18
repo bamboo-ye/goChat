@@ -95,3 +95,19 @@ type AIUsageLog struct {
 func (AIUsageLog) TableName() string {
 	return "ai_usage_log"
 }
+
+type AIMemory struct {
+	gorm.Model
+	OwnerID            uint      `json:"-" gorm:"not null;index:idx_ai_memory_owner_conversation"`
+	ConversationID     uint      `json:"conversationId" gorm:"not null;index:idx_ai_memory_owner_conversation"`
+	UserMessageID      uint      `json:"userMessageId" gorm:"not null;uniqueIndex:uk_ai_memory_turn,priority:1"`
+	AssistantMessageID uint      `json:"assistantMessageId" gorm:"not null;uniqueIndex:uk_ai_memory_turn,priority:2"`
+	Content            string    `json:"content" gorm:"type:text;not null"`
+	VectorJSON         string    `json:"-" gorm:"type:longtext;not null"`
+	VectorDimensions   int       `json:"-" gorm:"not null"`
+	OccurredAt         time.Time `json:"occurredAt" gorm:"not null;index"`
+}
+
+func (AIMemory) TableName() string {
+	return "ai_memory"
+}
